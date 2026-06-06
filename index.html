@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>GED Workflow | Sistema de Gestión Documental</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        
+        .login-modern {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=2011&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15;
+            z-index: 0;
+        }
+        
+        .login-modern::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 80%, rgba(120, 60, 180, 0.4) 0%, rgba(30, 30, 60, 0.6) 100%);
+            z-index: 0;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            transition: transform 0.3s ease;
+            z-index: 1;
+        }
+        
+        .glass-card:hover { transform: translateY(-5px); }
+        
+        .btn-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -12px rgba(102, 126, 234, 0.5);
+        }
+        
+        .input-modern {
+            transition: all 0.3s ease;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .input-modern:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+        
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+        
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 20s infinite ease-in-out;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(180deg); }
+        }
+        
+        .shape-1 { width: 300px; height: 300px; top: -100px; right: -100px; animation-duration: 25s; }
+        .shape-2 { width: 200px; height: 200px; bottom: -50px; left: -80px; animation-duration: 20s; animation-delay: 2s; }
+        .shape-3 { width: 150px; height: 150px; top: 40%; left: 10%; animation-duration: 18s; animation-delay: 4s; }
+        .shape-4 { width: 100px; height: 100px; bottom: 20%; right: 15%; animation-duration: 22s; animation-delay: 1s; }
+        
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .avatar-admin { background: linear-gradient(135deg, #dc2626, #991b1b); color: white; }
+        .avatar-gestor { background: linear-gradient(135deg, #f59e0b, #b45309); color: white; }
+        .avatar-consultor { background: linear-gradient(135deg, #10b981, #047857); color: white; }
+        .role-badge-admin { background: #dc2626; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+        .role-badge-gestor { background: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+        .role-badge-consultor { background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+        
+        .doc-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(203,213,225,0.5); cursor: pointer; }
+        .doc-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.15); }
+        
+        .radicado-badge { background: linear-gradient(135deg, #1e3a5f 0%, #2d4a7a 100%); font-family: monospace; }
+        .timer-urgent { background: linear-gradient(135deg, #fee2e2, #ffc5c5); border-left: 4px solid #dc2626; }
+        .timer-warning { background: linear-gradient(135deg, #fef3c7, #ffe6a3); border-left: 4px solid #f59e0b; }
+        .modal-transition { transition: opacity 0.25s ease, visibility 0.25s; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-spinner { animation: spin 0.8s linear infinite; }
+        .progress-bar { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .progress-verde { background: #10b981; }
+        .progress-amarillo { background: #f59e0b; }
+        .progress-rojo { background: #ef4444; }
+        .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+        .status-verde { background: #d1fae5; color: #065f46; }
+        .status-amarillo { background: #fed7aa; color: #92400e; }
+        .status-rojo { background: #fee2e2; color: #991b1b; }
+        .adjunto-badge { display: inline-flex; align-items: center; gap: 4px; background: #fef2f2; color: #dc2626; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 500; }
+        
+        .step-dependencia-select { width: 160px; font-size: 12px; padding: 4px 8px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; }
+        .table-users { width: 100%; border-collapse: collapse; }
+        .table-users th, .table-users td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .table-users th { background: #f8fafc; font-weight: 600; }
+        
+        .consulta-container {
+            overflow-x: auto;
+            border-radius: 0.75rem;
+            border: 1px solid #cbd5e1;
+            background: white;
+            width: 100%;
+        }
+        .consulta-tabla {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            min-width: 900px;
+        }
+        .consulta-tabla th,
+        .consulta-tabla td {
+            padding: 0.75rem 0.75rem;
+            text-align: left;
+            border: 1px solid #cbd5e1;
+            vertical-align: top;
+        }
+        .consulta-tabla th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.75rem;
+        }
+        .consulta-tabla tr:hover {
+            background: #f1f5f9;
+            cursor: pointer;
+        }
+        .remitente-columna {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .remitente-linea {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+        }
+        .remitente-linea i {
+            width: 0.875rem;
+            color: #94a3b8;
+            margin-top: 0.125rem;
+        }
+        .btn-primary { background: linear-gradient(95deg, #4f46e5, #7c3aed); cursor: pointer; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -12px rgba(79,70,229,0.4); }
+        
+        .email-modal {
+            max-width: 550px;
+        }
+        .select-dependencia {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            appearance: none;
+        }
+        
+        .semaforo {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .semaforo-item {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        .semaforo-item:hover {
+            transform: scale(1.05);
+        }
+        .semaforo-verde { background: linear-gradient(135deg, #10b98120, #10b98140); border: 2px solid #10b981; }
+        .semaforo-amarillo { background: linear-gradient(135deg, #f59e0b20, #f59e0b40); border: 2px solid #f59e0b; }
+        .semaforo-rojo { background: linear-gradient(135deg, #ef444420, #ef444440); border: 2px solid #ef4444; }
+        
+        .luz-semaforo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        .luz-verde { background: #10b981; box-shadow: 0 0 15px #10b981; }
+        .luz-amarilla { background: #f59e0b; box-shadow: 0 0 15px #f59e0b; }
+        .luz-roja { background: #ef4444; box-shadow: 0 0 15px #ef4444; }
+        
+        .notificacion {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .notificacion-urgente { border-left: 4px solid #dc2626; background: linear-gradient(135deg, #fee2e2, #ffc5c5); }
+        .notificacion-warning { border-left: 4px solid #f59e0b; background: linear-gradient(135deg, #fef3c7, #ffe6a3); }
+        
+        /* Mejoras en consulta */
+        .search-field-icon {
+            position: relative;
+        }
+        .search-field-icon i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+        .search-field-icon input {
+            padding-left: 35px;
+        }
+        .resultado-vacio {
+            text-align: center;
+            padding: 40px 20px;
+            color: #94a3b8;
+        }
+        .resultado-vacio i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN MODERNO -->
+    <div id="loginContainer" class="login-modern fixed inset-0 flex items-center justify-center p-4 z-50">
+        <div class="floating-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+            <div class="shape shape-4"></div>
+        </div>
+        
+        <div class="glass-card w-full max-w-5xl overflow-hidden relative z-10">
+            <div class="flex flex-col md:flex-row">
+                <div class="md:w-1/2 bg-gradient-to-br from-indigo-600 to-purple-700 p-8 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mt-32 -mr-32"></div>
+                    <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -mb-24 -ml-24"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-8">
+                            <div class="bg-white/20 p-3 rounded-2xl backdrop-blur-sm"><i class="fas fa-file-alt text-white text-2xl"></i></div>
+                            <div><h1 class="text-white text-2xl font-bold">GED Workflow</h1><p class="text-indigo-200 text-sm">Sistema de Gestión Documental</p></div>
+                        </div>
+                        <div class="mt-8">
+                            <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><i class="fas fa-check-circle text-white text-lg"></i></div><div><h3 class="text-white font-semibold">Radicación Inteligente</h3><p class="text-indigo-200 text-xs">Generación automática de códigos</p></div></div>
+                            <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><i class="fas fa-diagram-project text-white text-lg"></i></div><div><h3 class="text-white font-semibold">Flujos de Trabajo</h3><p class="text-indigo-200 text-xs">Gestión por pasos y dependencias</p></div></div>
+                            <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><i class="fas fa-chart-line text-white text-lg"></i></div><div><h3 class="text-white font-semibold">Dashboard Analítico</h3><p class="text-indigo-200 text-xs">Métricas y reportes en tiempo real</p></div></div>
+                            <div class="flex items-center gap-3"><div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><i class="fas fa-shield-alt text-white text-lg"></i></div><div><h3 class="text-white font-semibold">Seguridad Garantizada</h3><p class="text-indigo-200 text-xs">Roles y permisos por usuario</p></div></div>
+                        </div>
+                    </div>
+                    <div class="relative z-10 mt-8"><img src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=2070&auto=format&fit=crop" alt="Documentos" class="rounded-2xl opacity-70 hover:opacity-100 transition-opacity"></div>
+                </div>
+                
+                <div class="md:w-1/2 p-8 md:p-10">
+                    <div class="text-center mb-6">
+                        <div class="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"><i class="fas fa-file-alt text-3xl text-indigo-600"></i></div>
+                        <h2 class="text-2xl font-bold text-slate-800">Bienvenido</h2><p class="text-slate-500 text-sm mt-1">Ingresa tus credenciales para acceder</p>
+                    </div>
+                    
+                    <form id="loginForm" class="space-y-5">
+                        <div class="relative"><i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i><input type="email" id="loginUsuario" placeholder="Correo electrónico" class="input-modern w-full pl-12 pr-4 py-3.5 rounded-xl focus:outline-none"></div>
+                        <div class="relative"><i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i><input type="password" id="loginPassword" placeholder="Contraseña" class="input-modern w-full pl-12 pr-4 py-3.5 rounded-xl focus:outline-none"></div>
+                        <button type="submit" class="btn-modern w-full text-white font-bold py-3.5 rounded-xl text-lg shadow-lg"><i class="fas fa-arrow-right-to-bracket mr-2"></i> Ingresar</button>
+                    </form>
+                    
+                    <div class="mt-6">
+                        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4">
+                            <p class="text-xs text-indigo-700 text-center font-medium mb-2"><i class="fas fa-info-circle mr-1"></i> Credenciales de prueba</p>
+                            <div class="grid grid-cols-1 gap-2 text-xs">
+                                <div class="flex items-center justify-between bg-white rounded-lg p-2 shadow-sm"><div><p class="font-mono font-bold">admin@ged.com</p><p class="text-slate-400 text-[10px]">Contraseña: 123456</p></div><span class="role-badge-admin text-[9px]">Administrador</span></div>
+                                <div class="flex items-center justify-between bg-white rounded-lg p-2 shadow-sm"><div><p class="font-mono font-bold">gestor@ged.com</p><p class="text-slate-400 text-[10px]">Contraseña: 123456</p></div><span class="role-badge-gestor text-[9px]">Gestor</span></div>
+                                <div class="flex items-center justify-between bg-white rounded-lg p-2 shadow-sm"><div><p class="font-mono font-bold">consultor@ged.com</p><p class="text-slate-400 text-[10px]">Contraseña: 123456</p></div><span class="role-badge-consultor text-[9px]">Consultor</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 text-center"><p class="text-xs text-slate-400"><i class="fas fa-code mr-1"></i> Desarrollado por <span class="font-semibold text-indigo-600">Ing. Fabian Chacón</span></p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP PRINCIPAL -->
+    <div id="appContainer" class="hidden min-h-screen" style="background: #f0f4f8;">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-6 bg-white rounded-2xl p-4 shadow-sm border">
+                <div class="flex items-center gap-3"><div class="bg-gradient-to-br from-[#1e3a5f] to-[#2d4a7a] p-2.5 rounded-xl"><i class="fas fa-file-alt text-white text-2xl"></i></div><div><h1 class="text-2xl font-bold text-[#1e3a5f]">GED Correspondencia</h1><p class="text-slate-500 text-sm">Radicación · Gestión · Flujos · Usuarios</p></div></div>
+                <div class="flex items-center gap-4"><div class="bg-slate-100 px-4 py-2 rounded-full flex items-center gap-3"><div id="userAvatar" class="user-avatar"></div><div><p class="text-sm font-bold" id="userNameDisplay"></p><p class="text-xs text-slate-500" id="userEmailDisplay"></p><p class="text-xs" id="userRolDisplay"></p></div></div><button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-full text-sm">Salir</button></div>
+            </div>
+
+            <div class="flex gap-2 mb-6 bg-white p-1 rounded-xl shadow-sm w-fit flex-wrap">
+                <button id="tabDocumentos" class="px-5 py-2 rounded-lg font-semibold bg-[#1e3a5f] text-white shadow-md"><i class="fas fa-folder-open mr-2"></i> Documentos</button>
+                <button id="tabFlujos" class="px-5 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-100"><i class="fas fa-diagram-project mr-2"></i> Flujos</button>
+                <button id="tabDependencias" class="px-5 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-100"><i class="fas fa-building mr-2"></i> Dependencias</button>
+                <button id="tabDashboard" class="px-5 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-100"><i class="fas fa-chart-line mr-2"></i> Dashboard</button>
+                <button id="tabConsultas" class="px-5 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-100"><i class="fas fa-search mr-2"></i> Consultas</button>
+                <button id="tabUsuarios" class="px-5 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-100"><i class="fas fa-users mr-2"></i> Usuarios</button>
+            </div>
+
+            <div id="documentosSection"></div>
+            <div id="flujosSection" class="hidden"></div>
+            <div id="dependenciasSection" class="hidden"></div>
+            <div id="dashboardSection" class="hidden"></div>
+            <div id="consultasSection" class="hidden"></div>
+            <div id="usuariosSection" class="hidden"></div>
+        </div>
+    </div>
+
+    <!-- MODALES -->
+    <div id="modalDocumento" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 modal-transition invisible opacity-0"><div class="bg-white rounded-2xl w-full max-w-2xl mx-4 shadow-2xl max-h-[90vh] overflow-auto"><div class="sticky top-0 bg-white border-b p-5 flex justify-between"><h3 class="text-xl font-bold">Radicar Documento</h3><button id="closeDocModal" class="text-2xl">&times;</button></div><form id="documentForm" class="p-6 space-y-4"><input type="hidden" id="docId"><div class="bg-[#f0f4f8] p-4 rounded-xl border"><label class="font-semibold">Código de radicado</label><div class="flex gap-2 mt-1"><input type="text" id="codigoRadicado" readonly class="flex-1 font-mono text-lg font-bold bg-white border rounded-xl p-3"><button type="button" id="copyRadicadoBtn" class="bg-[#1e3a5f] text-white px-4 rounded-xl"><i class="fas fa-copy"></i></button></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="text" id="titulo" placeholder="Asunto / Título*" required class="border-2 rounded-xl p-2.5"><select id="tipo" class="border-2 rounded-xl p-2.5"><option>Oficio</option><option>Carta</option><option>Factura</option><option>Contrato</option><option>Acta</option><option>Memorando</option></select></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="date" id="fecha" class="border-2 rounded-xl p-2.5"><input type="date" id="fechaVencimiento" required class="border-2 rounded-xl p-2.5"></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><select id="dependenciaDestino" required class="border-2 rounded-xl p-2.5 w-full"></select><select id="flujoAsignado" class="border-2 rounded-xl p-2.5 w-full"><option value="">-- Sin flujo --</option></select></div><div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl"><label class="font-bold mb-3 block">DATOS DE CORRESPONDENCIA</label><div class="grid grid-cols-1 md:grid-cols-2 gap-3"><input id="remitente" placeholder="Remitente" class="border-2 rounded-xl p-2"><input id="destinatario" placeholder="Destinatario" class="border-2 rounded-xl p-2"><input id="direccion" placeholder="Dirección" class="border-2 rounded-xl p-2"><input id="referencia" placeholder="Referencia" class="border-2 rounded-xl p-2"></div></div><textarea id="descripcion" rows="4" placeholder="Contenido del documento" class="border-2 rounded-xl p-3"></textarea><div class="border-2 border-dashed border-indigo-300 rounded-xl p-4 bg-indigo-50/30"><label class="font-semibold flex items-center gap-2 text-indigo-700"><i class="fas fa-file-pdf"></i> Adjuntar documento PDF</label><input type="file" id="archivoPdf" accept=".pdf" class="mt-2 w-full text-sm text-slate-500"><div id="pdfInfoContainer" class="hidden mt-2 p-2 bg-green-50 rounded-lg text-sm"></div></div><div class="flex justify-end gap-3"><button type="button" id="cancelDocModal" class="border-2 px-5 py-2 rounded-xl">Cancelar</button><button type="submit" class="btn-primary text-white px-6 py-2 rounded-xl">Guardar</button></div></form></div></div>
+    <div id="modalFlujo" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 modal-transition invisible opacity-0"><div class="bg-white rounded-2xl w-full max-w-2xl mx-4 p-5"><div class="flex justify-between border-b pb-3"><h3 class="text-xl font-bold">Flujo de trabajo</h3><button id="closeFlujoModal" class="text-2xl">&times;</button></div><form id="flujoForm" class="space-y-4 mt-4"><input type="hidden" id="flujoIdEdit"><input type="text" id="flujoNombre" placeholder="Nombre del flujo" required class="w-full border-2 rounded-xl p-2.5"><div><label class="font-semibold">Pasos del flujo (asignar a dependencias)</label><div id="stepsContainer" class="space-y-2 max-h-80 overflow-auto bg-slate-50 p-3 rounded-xl mt-2"></div><button type="button" id="addStepBtn" class="text-indigo-600 text-sm mt-2 flex items-center gap-1"><i class="fas fa-plus-circle"></i> Agregar paso</button></div><div class="flex justify-end gap-3"><button type="button" id="cancelFlujoModal" class="border-2 px-5 py-2 rounded-xl">Cancelar</button><button type="submit" class="bg-emerald-500 text-white px-5 py-2 rounded-xl">Guardar</button></div></form></div></div>
+    <div id="modalAvanceFlujo" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 modal-transition invisible opacity-0"><div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold">Avanzar flujo</h3><p id="avanceDocInfo" class="my-3 text-slate-600 bg-slate-50 p-3 rounded-lg"></p><textarea id="comentarioAvance" rows="2" placeholder="Comentario (opcional)" class="w-full border-2 rounded-xl p-2"></textarea><div class="flex gap-3 mt-5"><button id="cancelAvanceBtn" class="border-2 flex-1 py-2 rounded-xl">Cancelar</button><button id="confirmAvanceBtn" class="bg-[#1e3a5f] text-white flex-1 py-2 rounded-xl">Siguiente</button></div></div></div>
+    <div id="modalUsuario" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 modal-transition invisible opacity-0"><div class="bg-white rounded-2xl w-full max-w-md mx-4 p-6"><div class="flex justify-between border-b pb-3"><h3 class="text-xl font-bold" id="modalUsuarioTitle">Nuevo Usuario</h3><button id="closeUsuarioModal" class="text-2xl">&times;</button></div><form id="usuarioForm" class="space-y-4 mt-4"><input type="hidden" id="usuarioIdEdit"><input type="text" id="usuarioNombre" placeholder="Nombre completo*" required class="w-full border-2 rounded-xl p-2.5"><input type="email" id="usuarioEmail" placeholder="Correo electrónico*" required class="w-full border-2 rounded-xl p-2.5"><input type="password" id="usuarioPassword" placeholder="Contraseña*" class="w-full border-2 rounded-xl p-2.5"><select id="usuarioRol" class="w-full border-2 rounded-xl p-2.5"><option value="consultor">Consultor</option><option value="gestor">Gestor</option><option value="admin">Administrador</option></select><div class="flex justify-end gap-3"><button type="button" id="cancelUsuarioModal" class="border-2 px-5 py-2 rounded-xl">Cancelar</button><button type="submit" class="bg-indigo-600 text-white px-5 py-2 rounded-xl">Guardar</button></div></form></div></div>
+    <div id="modalDependencia" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 modal-transition invisible opacity-0"><div class="bg-white rounded-2xl w-full max-w-md mx-4 p-6"><div class="flex justify-between border-b pb-3"><h3 class="text-xl font-bold">Dependencia</h3><button id="closeDependenciaModal" class="text-2xl">&times;</button></div><form id="dependenciaForm" class="space-y-4 mt-4"><input type="hidden" id="dependenciaIdEdit"><input type="text" id="dependenciaNombre" placeholder="Nombre*" required class="w-full border-2 rounded-xl p-2.5"><textarea id="dependenciaDescripcion" rows="2" placeholder="Descripción" class="w-full border-2 rounded-xl p-2.5"></textarea><input type="email" id="dependenciaEmail" placeholder="Correo electrónico de la dependencia" class="w-full border-2 rounded-xl p-2.5"><div class="flex justify-end gap-3"><button type="button" id="cancelDependenciaModal" class="border-2 px-5 py-2 rounded-xl">Cancelar</button><button type="submit" class="bg-emerald-600 text-white px-5 py-2 rounded-xl">Guardar</button></div></form></div></div>
+    <div id="modalVerPdf" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 modal-transition invisible opacity-0"><div class="bg-white rounded-2xl w-full max-w-4xl mx-4 shadow-2xl max-h-[90vh] overflow-auto"><div class="sticky top-0 bg-white border-b p-4 flex justify-between"><h3 class="text-xl font-bold">Vista Previa del Documento</h3><button id="closePdfModal" class="text-2xl">&times;</button></div><div class="p-4"><iframe id="pdfViewer" src="" class="w-full h-[80vh] border-0"></iframe></div></div></div>
+    <div id="modalEnviarCorreo" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 modal-transition invisible opacity-0"><div class="bg-white rounded-2xl w-full max-w-md mx-4 shadow-2xl"><div class="sticky top-0 bg-white border-b p-5 flex justify-between rounded-t-2xl"><h3 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-envelope text-indigo-600"></i> Enviar por Correo</h3><button id="closeCorreoModal" class="text-2xl text-slate-400 hover:text-slate-600">&times;</button></div><form id="enviarCorreoForm" class="p-6 space-y-4"><input type="hidden" id="correoDocId"><div><label class="block text-sm font-semibold text-slate-700 mb-1">Documento</label><div class="bg-slate-100 p-3 rounded-xl text-sm font-medium" id="correoDocTitulo">-</div></div><div><label class="block text-sm font-semibold text-slate-700 mb-1">Dependencia Destino</label><select id="correoDependencia" class="select-dependencia w-full border-2 rounded-xl p-2.5 focus:border-indigo-500 focus:outline-none" required><option value="">Seleccione una dependencia...</option></select></div><div><label class="block text-sm font-semibold text-slate-700 mb-1">Correo del Destinatario</label><input type="email" id="correoDestinatario" placeholder="correo@dependencia.gov.co" class="w-full border-2 rounded-xl p-2.5 focus:border-indigo-500 focus:outline-none" required><p class="text-xs text-slate-400 mt-1">El correo se enviará a esta dirección</p></div><div><label class="block text-sm font-semibold text-slate-700 mb-1">Asunto</label><input type="text" id="correoAsunto" placeholder="Asunto del correo" class="w-full border-2 rounded-xl p-2.5 focus:border-indigo-500 focus:outline-none" required></div><div><label class="block text-sm font-semibold text-slate-700 mb-1">Mensaje</label><textarea id="correoMensaje" rows="4" placeholder="Escriba el mensaje para la dependencia..." class="w-full border-2 rounded-xl p-2.5 focus:border-indigo-500 focus:outline-none" required></textarea></div><div class="flex gap-3 pt-2"><button type="button" id="cancelCorreoBtn" class="border-2 flex-1 py-2.5 rounded-xl font-medium hover:bg-slate-50">Cancelar</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white flex-1 py-2.5 rounded-xl font-medium transition flex items-center justify-center gap-2"><i class="fas fa-paper-plane"></i> Enviar Correo</button></div></form></div></div>
+
+    <script>
+        // ==================== DATOS GLOBALES ====================
+        let currentUser = null;
+        let documentos = [];
+        let dependencias = [];
+        let workflows = [];
+        let users = [];
+        let currentAvanceDocId = null;
+        let notificacionesTimeout = null;
+        
+        const USUARIOS_PREDEFINIDOS = [
+            { id: '1', email: 'admin@ged.com', password: '123456', nombre: 'Administrador General', rol: 'admin', activo: true, fechaRegistro: new Date().toISOString() },
+            { id: '2', email: 'gestor@ged.com', password: '123456', nombre: 'Carlos Gestor', rol: 'gestor', activo: true, fechaRegistro: new Date().toISOString() },
+            { id: '3', email: 'consultor@ged.com', password: '123456', nombre: 'María Consultora', rol: 'consultor', activo: true, fechaRegistro: new Date().toISOString() }
+        ];
+
+        function inicializarDatos() {
+            if (!localStorage.getItem('ged_users')) {
+                localStorage.setItem('ged_users', JSON.stringify(USUARIOS_PREDEFINIDOS));
+            }
+            users = JSON.parse(localStorage.getItem('ged_users'));
+            
+            if (!localStorage.getItem('ged_dependencias')) {
+                localStorage.setItem('ged_dependencias', JSON.stringify([
+                    { id: 'dep1', nombre: 'Secretaría General', descripcion: 'Coordinación administrativa', email: 'secretaria.general@municipio.gov.co' },
+                    { id: 'dep2', nombre: 'Oficina Jurídica', descripcion: 'Asesoría legal', email: 'juridica@municipio.gov.co' },
+                    { id: 'dep3', nombre: 'Dirección Financiera', descripcion: 'Gestión financiera', email: 'financiera@municipio.gov.co' }
+                ]));
+            }
+            dependencias = JSON.parse(localStorage.getItem('ged_dependencias'));
+        }
+
+        function mostrarToast(mensaje, tipo) {
+            const toast = document.createElement('div');
+            const bgColor = tipo === 'success' ? 'bg-green-500' : (tipo === 'error' ? 'bg-red-500' : 'bg-blue-500');
+            toast.className = 'fixed bottom-4 right-4 text-white px-4 py-2 rounded-lg shadow-lg z-50 ' + bgColor;
+            toast.innerHTML = '<i class="fas ' + (tipo === 'success' ? 'fa-check-circle' : (tipo === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle')) + ' mr-2"></i>' + mensaje;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+        function getGlobalConsecutivo() { let c = parseInt(localStorage.getItem('rad_consecutivo_global') || '0'); c++; localStorage.setItem('rad_consecutivo_global', c.toString()); return c; }
+        function generarCodigoRadicado(depNombre) { const año = new Date().getFullYear(); const cons = getGlobalConsecutivo(); let siglas = depNombre.substring(0,3).toUpperCase(); return 'GED-' + año + '-' + siglas + '-' + cons.toString().padStart(5,'0'); }
+        function calcularEstadoTiempo(fechaVencimiento) { if(!fechaVencimiento) return 'normal'; const hoy = new Date(), venc = new Date(fechaVencimiento); const diff = Math.ceil((venc - hoy) / (1000*60*60*24)); if(diff < 0) return 'vencido'; if(diff <= 3) return 'porVencer'; return 'normal'; }
+        function calcularTiempoRestanteTexto(fechaVencimiento) { if(!fechaVencimiento) return 'Sin fecha'; const hoy = new Date(), venc = new Date(fechaVencimiento); const diff = Math.ceil((venc - hoy) / (1000*60*60*24)); if(diff < 0) return `Vencido hace ${Math.abs(diff)} días`; if(diff === 0) return 'Vence hoy'; return `${diff} días restantes`; }
+        function tienePermiso(accion) { if (!currentUser) return false; if (currentUser.rol === 'admin') return true; if (currentUser.rol === 'gestor') return ['crear_documento', 'editar_documento', 'eliminar_documento', 'avanzar_flujo', 'enviar_correo'].includes(accion); if (currentUser.rol === 'consultor') return ['ver_documentos', 'enviar_correo'].includes(accion); return false; }
+        function getWorkflowById(id) { return workflows.find(w => w.id === id); }
+        function getDependenciaOptionsHtml(selectedId) { return dependencias.map(d => `<option value="${d.id}" ${selectedId === d.id ? 'selected' : ''}>🏢 ${d.nombre}</option>`).join(''); }
+
+        function convertirArchivoABase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); reader.onerror = reject; }); }
+        function verPdfAdjunto(archivoBase64, titulo) { if (!archivoBase64) { mostrarToast('No hay archivo PDF adjunto', 'error'); return; } document.getElementById('pdfViewer').src = archivoBase64; document.getElementById('modalVerPdf').classList.remove('invisible', 'opacity-0'); }
+
+        function enviarCorreoConAnexo(destinatario, asunto, mensaje, documentoInfo, archivoBase64) {
+            return new Promise((resolve) => { setTimeout(() => { console.log('📧 CORREO ENVIADO a:', destinatario); resolve(true); }, 1000); });
+        }
+        function enviarCorreo(destinatario, asunto, mensaje, documentoInfo) { return enviarCorreoConAnexo(destinatario, asunto, mensaje, documentoInfo, null); }
+
+        function cargarDatosUsuario() {
+            const storedFlows = localStorage.getItem('ged_workflows_' + currentUser.email);
+            if(storedFlows) { workflows = JSON.parse(storedFlows); }
+            else {
+                workflows = [{ id: 'wf1', nombre: 'Gestión Documental', pasos: [{nombre:'Recepción', orden:0, dependenciaId:'dep1', dependenciaNombre:'Secretaría General', responsable:'Secretaría General'},{nombre:'Revisión', orden:1, dependenciaId:'dep2', dependenciaNombre:'Oficina Jurídica', responsable:'Oficina Jurídica'},{nombre:'Aprobación', orden:2, dependenciaId:'dep3', dependenciaNombre:'Dirección Financiera', responsable:'Dirección Financiera'},{nombre:'Archivo', orden:3, dependenciaId:'dep1', dependenciaNombre:'Secretaría General', responsable:'Secretaría General'}] }];
+                localStorage.setItem('ged_workflows_' + currentUser.email, JSON.stringify(workflows));
+            }
+            const storedDocs = localStorage.getItem('ged_docs_' + currentUser.email);
+            if(storedDocs) { documentos = JSON.parse(storedDocs); }
+            else {
+                const hoy = new Date().toISOString().slice(0,10);
+                localStorage.setItem('rad_consecutivo_global', '0');
+                documentos = [];
+                for(let i=1; i<=6; i++) {
+                    const diasVencimiento = i === 1 ? 1 : (i === 2 ? 3 : (i === 3 ? 5 : (i === 4 ? -2 : (i === 5 ? 10 : 15))));
+                    const dep = dependencias[(i-1)%3];
+                    documentos.push({
+                        id: i.toString(),
+                        codigoRadicado: 'GED-' + new Date().getFullYear() + '-' + dep.nombre.substring(0,3).toUpperCase() + '-' + getGlobalConsecutivo().toString().padStart(5,'0'),
+                        titulo: i === 1 ? 'Contrato de prestación de servicios' : (i === 2 ? 'Solicitud de cotización' : (i === 3 ? 'Informe de gestión trimestral' : (i === 4 ? 'Factura de cobro' : (i === 5 ? 'Resolución administrativa' : 'Acta de reunión')))),
+                        tipo: i === 1 ? 'Contrato' : (i === 2 ? 'Oficio' : (i === 3 ? 'Informe' : (i === 4 ? 'Factura' : (i === 5 ? 'Resolución' : 'Acta')))),
+                        fecha: hoy,
+                        fechaVencimiento: new Date(Date.now() + diasVencimiento * 86400000).toISOString().slice(0,10),
+                        dependenciaId: dep.id,
+                        dependenciaNombre: dep.nombre,
+                        remitente: i === 1 ? 'Empresa ABC SAS' : (i === 2 ? 'Corporación XYZ' : (i === 3 ? 'Dirección General' : (i === 4 ? 'Proveedor SAS' : (i === 5 ? 'Alcaldía Municipal' : 'Comité Directivo')))),
+                        destinatario: i === 1 ? 'Oficina Jurídica' : (i === 2 ? 'Secretaría General' : (i === 3 ? 'Junta Directiva' : (i === 4 ? 'Contabilidad' : (i === 5 ? 'Secretaría General' : 'Archivo General')))),
+                        direccion: i === 1 ? 'Calle 123 #45-67' : (i === 2 ? 'Avenida Siempre Viva #123' : (i === 3 ? 'Centro Administrativo' : (i === 4 ? 'Carrera 8 #20-30' : (i === 5 ? 'Plaza Mayor 1' : 'Edificio Principal Piso 3')))),
+                        referencia: i === 1 ? 'CTO-001-2024' : (i === 2 ? 'COT-023-2024' : (i === 3 ? 'INF-045-2024' : (i === 4 ? 'FAC-089-2024' : (i === 5 ? 'RES-012-2024' : 'ACT-078-2024')))),
+                        descripcion: i === 1 ? 'Por medio del presente contrato...' : (i === 2 ? 'Solicitamos cotización...' : (i === 3 ? 'Informe trimestral...' : (i === 4 ? 'Factura de cobro...' : (i === 5 ? 'Resolución administrativa...' : 'Acta de reunión...')))),
+                        workflowId: 'wf1',
+                        workflowStep: i % 3,
+                        workflowStatus: i % 3 === 2 ? 'Aprobado' : (i % 3 === 1 ? 'En revisión' : 'Pendiente'),
+                        archivoPdf: null,
+                        responsableActual: i % 3 === 0 ? 'Carlos Gestor' : (i % 3 === 1 ? 'Oficina Jurídica' : 'Secretaría General')
+                    });
+                }
+                localStorage.setItem('ged_docs_' + currentUser.email, JSON.stringify(documentos));
+            }
+        }
+
+        function guardarDocumentos() { localStorage.setItem('ged_docs_' + currentUser.email, JSON.stringify(documentos)); }
+        function guardarWorkflows() { localStorage.setItem('ged_workflows_' + currentUser.email, JSON.stringify(workflows)); }
+        function guardarUsuarios() { localStorage.setItem('ged_users', JSON.stringify(users)); }
+        function guardarDependencias() { localStorage.setItem('ged_dependencias', JSON.stringify(dependencias)); }
+
+        // CRUD básico
+        function agregarUsuario(nombre, email, password, rol) { if (users.find(u => u.email === email)) { mostrarToast('Email ya registrado', 'error'); return false; } users.push({ id: Date.now().toString(), email, nombre, password, rol, activo: true, fechaRegistro: new Date().toISOString() }); guardarUsuarios(); renderizarUsuarios(); mostrarToast('Usuario creado', 'success'); return true; }
+        function actualizarUsuario(id, data) { const idx = users.findIndex(u => u.id === id); if(idx !== -1) { if (data.password && data.password !== '') users[idx].password = data.password; users[idx].nombre = data.nombre; users[idx].email = data.email; users[idx].rol = data.rol; guardarUsuarios(); renderizarUsuarios(); mostrarToast('Usuario actualizado', 'success'); return true; } return false; }
+        function eliminarUsuario(id) { if (currentUser && currentUser.email === users.find(u => u.id === id)?.email) { mostrarToast('No puedes eliminar tu propio usuario', 'error'); return false; } users = users.filter(u => u.id !== id); guardarUsuarios(); renderizarUsuarios(); mostrarToast('Usuario eliminado', 'info'); return true; }
+        function cambiarEstadoUsuario(id, activo) { const idx = users.findIndex(u => u.id === id); if(idx !== -1) { users[idx].activo = activo; guardarUsuarios(); renderizarUsuarios(); mostrarToast(activo ? 'Usuario activado' : 'Usuario desactivado', 'success'); return true; } return false; }
+        function agregarDependencia(nombre, descripcion, email) { dependencias.push({ id: 'dep' + Date.now(), nombre, descripcion: descripcion || '', email: email || '' }); guardarDependencias(); renderizarDependencias(); cargarSelects(); mostrarToast('Dependencia agregada', 'success'); }
+        function actualizarDependencia(id, data) { const idx = dependencias.findIndex(d => d.id === id); if(idx !== -1) { dependencias[idx] = { ...dependencias[idx], ...data }; guardarDependencias(); renderizarDependencias(); cargarSelects(); mostrarToast('Dependencia actualizada', 'success'); } }
+        function eliminarDependencia(id) { dependencias = dependencias.filter(d => d.id !== id); guardarDependencias(); renderizarDependencias(); cargarSelects(); mostrarToast('Dependencia eliminada', 'info'); }
+        function eliminarDocumento(id) { documentos = documentos.filter(d => d.id !== id); guardarDocumentos(); renderizarDocumentos(); actualizarDashboard(); mostrarToast('Documento eliminado', 'info'); }
+        function guardarDocumento(data, idEdicion, archivoBase64 = null) {
+            if(idEdicion) {
+                const idx = documentos.findIndex(d => d.id === idEdicion);
+                if(idx !== -1) { if (archivoBase64 !== undefined) data.archivoPdf = archivoBase64; documentos[idx] = { ...documentos[idx], ...data }; }
+                mostrarToast('Documento actualizado', 'success');
+            } else {
+                const depSel = dependencias.find(d => d.id === data.dependenciaId);
+                if (!depSel) { mostrarToast('Seleccione una dependencia', 'error'); return; }
+                const nuevoRadicado = generarCodigoRadicado(depSel.nombre);
+                const wf = data.workflowId ? getWorkflowById(data.workflowId) : null;
+                const primerPaso = wf && wf.pasos[0] ? wf.pasos[0] : null;
+                const nuevoDoc = { ...data, id: Date.now().toString(), codigoRadicado: nuevoRadicado, dependenciaNombre: depSel.nombre, workflowStep: 0, workflowStatus: data.workflowId ? 'Pendiente' : 'Sin flujo', archivoPdf: archivoBase64 || null, responsableActual: primerPaso ? primerPaso.responsable : depSel.nombre };
+                documentos.unshift(nuevoDoc);
+                mostrarToast('Documento radicado: ' + nuevoRadicado + (archivoBase64 ? ' con PDF adjunto' : ''), 'success');
+            }
+            guardarDocumentos();
+            renderizarDocumentos();
+            actualizarDashboard();
+            cerrarModalDoc();
+        }
+        async function actualizarPasoDocumento(docId, comentario = '') {
+            const doc = documentos.find(d => d.id === docId);
+            if(!doc || !doc.workflowId) { mostrarToast('Sin flujo asignado', 'error'); return false; }
+            const wf = getWorkflowById(doc.workflowId);
+            if (!wf) { mostrarToast('Flujo no encontrado', 'error'); return false; }
+            let step = doc.workflowStep || 0;
+            if(step >= wf.pasos.length - 1) { mostrarToast('Flujo ya completado', 'info'); return false; }
+            const siguientePaso = wf.pasos[step + 1];
+            const dependenciaDestino = dependencias.find(d => d.id === siguientePaso.dependenciaId);
+            if (dependenciaDestino && dependenciaDestino.email) {
+                const tieneAnexo = doc.archivoPdf && doc.archivoPdf.length > 100;
+                if (tieneAnexo) { await enviarCorreoConAnexo(dependenciaDestino.email, `Documento ${doc.codigoRadicado} - Paso: ${siguientePaso.nombre}`, `Se ha avanzado el documento...`, { codigo: doc.codigoRadicado }, doc.archivoPdf); }
+                else { await enviarCorreo(dependenciaDestino.email, `Documento ${doc.codigoRadicado} - Paso: ${siguientePaso.nombre}`, `Se ha avanzado el documento...`, { codigo: doc.codigoRadicado }); }
+            }
+            doc.workflowStep = step + 1;
+            doc.workflowStatus = (doc.workflowStep === wf.pasos.length - 1) ? 'Aprobado' : 'En revisión';
+            doc.responsableActual = siguientePaso.responsable;
+            guardarDocumentos();
+            renderizarDocumentos();
+            actualizarDashboard();
+            mostrarToast(`Flujo avanzado a: ${siguientePaso.nombre}`, 'success');
+            return true;
+        }
+
+        // RENDERIZAR USUARIOS
+        function renderizarUsuarios() {
+            if (currentUser?.rol !== 'admin') { 
+                const container = document.getElementById('usuariosContainer'); 
+                if(container) container.innerHTML = '<div class="bg-white rounded-2xl p-8 text-center"><i class="fas fa-lock text-5xl text-slate-300 mb-3"></i><p class="text-slate-500">Acceso restringido</p></div>'; 
+                return; 
+            }
+            let html = `<div class="bg-white rounded-2xl shadow-lg"><div class="flex justify-between items-center p-6 border-b"><div><h2 class="text-2xl font-bold">Usuarios</h2></div><button id="btnNuevoUsuario" class="bg-indigo-600 text-white px-4 py-2 rounded-xl"><i class="fas fa-user-plus"></i> Nuevo</button></div><div class="overflow-x-auto p-4"><table class="table-users"><thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Estado</th><th>Fecha Reg.</th><th>Acciones</th></tr></thead><tbody>`;
+            for (let u of users) { 
+                let rolClass = u.rol === 'admin' ? 'role-badge-admin' : (u.rol === 'gestor' ? 'role-badge-gestor' : 'role-badge-consultor'); 
+                let rolText = u.rol === 'admin' ? 'Admin' : (u.rol === 'gestor' ? 'Gestor' : 'Consultor'); 
+                let fechaReg = u.fechaRegistro ? new Date(u.fechaRegistro).toLocaleDateString() : '-';
+                html += `<tr><td class="font-medium"><i class="fas ${u.rol === 'admin' ? 'fa-user-shield' : (u.rol === 'gestor' ? 'fa-user-check' : 'fa-user')} mr-2 text-slate-400"></i>${escapeHtml(u.nombre)}</td>
+                        <td class="text-slate-600">${escapeHtml(u.email)}</td>
+                        <td><span class="${rolClass}">${rolText}</span></td>
+                        <td><button class="toggle-estado px-2 py-1 rounded-full text-xs ${u.activo !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}" data-id="${u.id}">${u.activo !== false ? 'Activo' : 'Inactivo'}</button></td>
+                        <td class="text-sm text-slate-500">${fechaReg}</td>
+                        <td class="text-center"><button class="editar-usuario text-blue-600 mx-1" data-id="${u.id}"><i class="fas fa-edit"></i></button>${u.email !== currentUser.email ? `<button class="eliminar-usuario text-red-500 mx-1" data-id="${u.id}"><i class="fas fa-trash"></i></button>` : ''}</td></tr>`;
+            }
+            html += `</tbody></table></div></div>`;
+            document.getElementById('usuariosContainer').innerHTML = html;
+            document.getElementById('btnNuevoUsuario')?.addEventListener('click', () => abrirModalUsuario());
+            document.querySelectorAll('.editar-usuario').forEach(b => b.addEventListener('click', () => abrirModalUsuario(b.dataset.id)));
+            document.querySelectorAll('.eliminar-usuario').forEach(b => b.addEventListener('click', () => { if(confirm('¿Eliminar usuario?')) eliminarUsuario(b.dataset.id); }));
+            document.querySelectorAll('.toggle-estado').forEach(b => b.addEventListener('click', () => { let id = b.dataset.id; let estado = b.innerText.includes('Activo') ? false : true; cambiarEstadoUsuario(id, estado); }));
+        }
+
+        function renderizarDocumentos() {
+            const container = document.getElementById('documentosContainer');
+            if (!container) return;
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            let filtrados = [...documentos];
+            if (searchTerm) filtrados = filtrados.filter(d => (d.codigoRadicado || '').toLowerCase().includes(searchTerm) || (d.titulo || '').toLowerCase().includes(searchTerm));
+            if (document.getElementById('resultCount')) document.getElementById('resultCount').innerHTML = filtrados.length + ' documentos';
+            if (filtrados.length === 0) { container.innerHTML = '<div class="text-center py-16"><i class="fas fa-inbox text-4xl text-slate-300 mb-2"></i><p>No hay documentos</p></div>'; return; }
+            let tarjetas = '';
+            for (let d of filtrados) {
+                const et = calcularEstadoTiempo(d.fechaVencimiento);
+                const etTexto = et === 'vencido' ? 'VENCIDO' : (et === 'porVencer' ? '⚠️ Por vencer' : '✓ Normal');
+                const tiempoRestante = calcularTiempoRestanteTexto(d.fechaVencimiento);
+                const progressClass = et === 'vencido' ? 'progress-rojo' : (et === 'porVencer' ? 'progress-amarillo' : 'progress-verde');
+                const porcentaje = et === 'vencido' ? 100 : (et === 'porVencer' ? 85 : 50);
+                const wf = getWorkflowById(d.workflowId);
+                const pasoActual = wf && d.workflowStep !== undefined ? wf.pasos[d.workflowStep]?.nombre : (wf ? wf.pasos[0]?.nombre : 'Sin flujo');
+                const tieneAdjunto = d.archivoPdf && d.archivoPdf.length > 100;
+                const responsableDep = wf && wf.pasos[d.workflowStep] ? wf.pasos[d.workflowStep].dependenciaNombre : d.dependenciaNombre;
+                tarjetas += `<div class="doc-card bg-white rounded-2xl shadow-md overflow-hidden"><div class="p-5"><div class="flex justify-between items-start"><div class="radicado-badge text-white text-xs px-3 py-1 rounded-full">${escapeHtml(d.codigoRadicado)}</div><div class="flex gap-2">${tieneAdjunto ? `<span class="adjunto-badge"><i class="fas fa-paperclip"></i> PDF</span>` : ''}<span class="text-xs px-2 py-0.5 rounded-full ${d.workflowStatus === 'Aprobado' ? 'bg-emerald-100 text-emerald-700' : (d.workflowStatus === 'En revisión' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600')}">${d.workflowStatus || 'Pendiente'}</span></div></div><h3 class="font-bold text-lg mt-2">${escapeHtml(d.titulo)}</h3><div class="flex flex-wrap gap-2 mt-2 text-xs"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">${escapeHtml(d.dependenciaNombre)}</span><span>${d.tipo}</span></div><div class="mt-2 text-xs"><i class="fas fa-user-check text-green-600 mr-1"></i> <strong>Responsable:</strong> ${escapeHtml(d.responsableActual || '-')}</div><div class="mt-1 text-xs"><i class="fas fa-hourglass-half text-amber-600 mr-1"></i> <strong>Tiempo:</strong> ${escapeHtml(tiempoRestante)}</div><div class="mt-1 text-xs"><i class="fas fa-diagram-project text-purple-600 mr-1"></i> <strong>Paso:</strong> ${escapeHtml(pasoActual)} (${escapeHtml(responsableDep)})</div><div class="mt-3"><div class="flex justify-between text-xs mb-1"><span>Progreso</span><span class="${et === 'vencido' ? 'text-red-600' : (et === 'porVencer' ? 'text-amber-600' : 'text-green-600')} font-semibold">${etTexto}</span></div><div class="progress-bar"><div class="progress-fill ${progressClass}" style="width: ${porcentaje}%"></div></div></div><div class="mt-2 p-2 rounded-xl ${et === 'vencido' ? 'timer-urgent' : (et === 'porVencer' ? 'timer-warning' : 'border-l-4 border-green-500 bg-green-50')}"><div class="flex justify-between text-sm"><span><i class="fas fa-calendar-times"></i> Vence: ${d.fechaVencimiento}</span><span class="font-bold">${etTexto}</span></div></div><div class="flex justify-end gap-2 mt-3 pt-2 border-t flex-wrap"><button class="btn-enviar-correo bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm" data-id="${d.id}" title="Enviar por correo a dependencia"><i class="fas fa-envelope"></i> Enviar Correo</button>${tieneAdjunto ? `<button class="ver-pdf-btn bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm" data-pdf="${escapeHtml(d.archivoPdf)}" data-titulo="${escapeHtml(d.titulo)}"><i class="fas fa-eye"></i> Ver PDF</button>` : ''}${tienePermiso('avanzar_flujo') && d.workflowStatus !== 'Aprobado' && d.workflowId ? `<button class="btn-avanzar-flujo text-indigo-600 p-1.5 hover:bg-indigo-50 rounded-lg" data-id="${d.id}"><i class="fas fa-step-forward"></i></button>` : ''}${tienePermiso('editar_documento') ? `<button class="btn-editar-doc text-blue-600 p-1.5 hover:bg-blue-50 rounded-lg" data-id="${d.id}"><i class="fas fa-edit"></i></button>` : ''}${tienePermiso('eliminar_documento') ? `<button class="btn-eliminar-doc text-red-500 p-1.5 hover:bg-red-50 rounded-lg" data-id="${d.id}"><i class="fas fa-trash"></i></button>` : ''}</div></div></div>`;
+            }
+            container.innerHTML = tarjetas;
+            document.querySelectorAll('.btn-editar-doc').forEach(b => b.addEventListener('click', () => abrirModalEdicionDoc(b.dataset.id)));
+            document.querySelectorAll('.btn-eliminar-doc').forEach(b => b.addEventListener('click', () => { if(confirm('¿Eliminar documento?')) eliminarDocumento(b.dataset.id); }));
+            document.querySelectorAll('.btn-avanzar-flujo').forEach(b => b.addEventListener('click', () => abrirModalAvance(b.dataset.id)));
+            document.querySelectorAll('.ver-pdf-btn').forEach(b => b.addEventListener('click', () => verPdfAdjunto(b.dataset.pdf, b.dataset.titulo)));
+            document.querySelectorAll('.btn-enviar-correo').forEach(b => b.addEventListener('click', () => abrirModalEnviarCorreo(b.dataset.id)));
+        }
+
+        function renderizarFlujos() {
+            const container = document.getElementById('flujosContainer');
+            if (!container) return;
+            if (workflows.length === 0) { container.innerHTML = '<div class="text-center py-16">No hay flujos</div>'; return; }
+            let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+            for (var wf of workflows) {
+                let pasosHtml = '';
+                for (var idx in wf.pasos) {
+                    var p = wf.pasos[idx];
+                    let depNombre = dependencias.find(d => d.id === p.dependenciaId)?.nombre || p.dependenciaNombre || 'Sin asignar';
+                    pasosHtml += `<li class="flex items-center gap-2 py-2 border-b"><span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold">${parseInt(idx)+1}</span><div class="flex-1"><span class="font-medium">${escapeHtml(p.nombre)}</span><span class="text-xs text-slate-500 ml-2">(${escapeHtml(p.responsable)})</span></div><span class="text-xs bg-slate-100 px-2 py-1 rounded-full">${escapeHtml(depNombre)}</span></li>`;
+                }
+                html += `<div class="bg-white rounded-2xl shadow-md border p-4"><div class="flex justify-between"><div><h3 class="font-bold"><i class="fas fa-diagram-project text-indigo-500 mr-2"></i>${escapeHtml(wf.nombre)}</h3><p class="text-xs text-slate-400">${wf.pasos.length} pasos</p></div>${currentUser?.rol === 'admin' ? `<div><button class="editar-flujo text-blue-600 p-1" data-id="${wf.id}"><i class="fas fa-edit"></i></button><button class="eliminar-flujo text-red-500 p-1" data-id="${wf.id}"><i class="fas fa-trash"></i></button></div>` : ''}</div><ul class="mt-3 space-y-1">${pasosHtml}</ul></div>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+            if (currentUser?.rol === 'admin') {
+                document.querySelectorAll('.editar-flujo').forEach(b => b.addEventListener('click', () => abrirModalFlujo(b.dataset.id)));
+                document.querySelectorAll('.eliminar-flujo').forEach(b => b.addEventListener('click', () => { if(confirm('¿Eliminar flujo?')) { workflows = workflows.filter(w => w.id !== b.dataset.id); guardarWorkflows(); renderizarFlujos(); mostrarToast('Flujo eliminado', 'info'); } }));
+            }
+        }
+
+        function renderizarDependencias() {
+            const container = document.getElementById('dependenciasContainer');
+            if (!container) return;
+            let html = `<div class="bg-white rounded-2xl shadow-lg p-5"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">Dependencias</h2>${currentUser?.rol === 'admin' ? '<button id="btnNuevaDependencia" class="bg-emerald-500 text-white px-4 py-2 rounded-xl"><i class="fas fa-plus"></i> Nueva</button>' : ''}</div><div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+            for (var d of dependencias) {
+                html += `<div class="border rounded-xl p-3"><div class="flex justify-between"><h3 class="font-bold text-indigo-700">🏢 ${escapeHtml(d.nombre)}</h3>${currentUser?.rol === 'admin' ? `<div><button class="editar-dep text-blue-600 mr-2" data-id="${d.id}" title="Editar"><i class="fas fa-edit"></i></button><button class="eliminar-dep text-red-500" data-id="${d.id}" title="Eliminar"><i class="fas fa-trash"></i></button></div>` : ''}</div><p class="text-sm text-slate-500 mt-2">${escapeHtml(d.descripcion || 'Sin descripción')}</p>${d.email ? `<p class="text-xs text-slate-400 mt-1"><i class="fas fa-envelope"></i> ${d.email}</p>` : ''}</div>`;
+            }
+            html += '</div></div>';
+            container.innerHTML = html;
+            if (currentUser?.rol === 'admin') {
+                document.querySelectorAll('.editar-dep').forEach(b => b.addEventListener('click', () => abrirModalDependencia(b.dataset.id)));
+                document.querySelectorAll('.eliminar-dep').forEach(b => b.addEventListener('click', () => { if(confirm('¿Eliminar dependencia?')) eliminarDependencia(b.dataset.id); }));
+                document.getElementById('btnNuevaDependencia')?.addEventListener('click', () => abrirModalDependencia());
+            }
+        }
+
+        function actualizarDashboard() {
+            const vencidos = documentos.filter(d => calcularEstadoTiempo(d.fechaVencimiento) === 'vencido').length;
+            const porVencer = documentos.filter(d => calcularEstadoTiempo(d.fechaVencimiento) === 'porVencer').length;
+            const normales = documentos.length - vencidos - porVencer;
+            document.getElementById('totalDocs') && (document.getElementById('totalDocs').innerText = documentos.length);
+            document.getElementById('vencidosCount') && (document.getElementById('vencidosCount').innerText = vencidos);
+            document.getElementById('porVencerCount') && (document.getElementById('porVencerCount').innerText = porVencer);
+            document.getElementById('normalesCount') && (document.getElementById('normalesCount').innerText = normales);
+            const semaforoInfo = document.getElementById('semaforoInfo');
+            if (semaforoInfo) {
+                let mensajeSemaforo = '';
+                let estadoGeneral = 'normal';
+                if (vencidos > 0) { estadoGeneral = 'critico'; mensajeSemaforo = `⚠️ ALERTA: ${vencidos} documento(s) VENCIDO(S) requieren atención inmediata.`; }
+                else if (porVencer > 0) { estadoGeneral = 'advertencia'; mensajeSemaforo = `⚡ PRECAUCIÓN: ${porVencer} documento(s) están por vencer (3 días o menos).`; }
+                else { mensajeSemaforo = `✅ Todo en orden. Todos los documentos están dentro del plazo establecido.`; }
+                semaforoInfo.innerHTML = mensajeSemaforo;
+                semaforoInfo.className = `text-sm font-medium mt-2 p-2 rounded-lg ${estadoGeneral === 'critico' ? 'bg-red-100 text-red-700' : (estadoGeneral === 'advertencia' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700')}`;
+            }
+            const notificacionesContainer = document.getElementById('notificacionesContainer');
+            if (notificacionesContainer) {
+                const urgentes = documentos.filter(d => { const estado = calcularEstadoTiempo(d.fechaVencimiento); return estado === 'vencido' || estado === 'porVencer'; }).sort((a, b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento));
+                if (urgentes.length === 0) { notificacionesContainer.innerHTML = `<div class="text-center py-4 text-slate-400"><i class="fas fa-check-circle text-green-500 mr-2"></i>No hay documentos con alertas de tiempo</div>`; }
+                else {
+                    let notificacionesHtml = '';
+                    for (let doc of urgentes) {
+                        const estado = calcularEstadoTiempo(doc.fechaVencimiento);
+                        const isVencido = estado === 'vencido';
+                        const diasRestantes = Math.ceil((new Date(doc.fechaVencimiento) - new Date()) / (1000*60*60*24));
+                        const notifClass = isVencido ? 'notificacion-urgente' : 'notificacion-warning';
+                        const icono = isVencido ? '<i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>' : '<i class="fas fa-clock text-amber-500 mr-2"></i>';
+                        const textoEstado = isVencido ? `VENCIDO hace ${Math.abs(diasRestantes)} días` : `Vence en ${diasRestantes} día(s)`;
+                        notificacionesHtml += `<div class="${notifClass} notificacion p-3 rounded-lg mb-2 shadow-sm hover:shadow-md transition cursor-pointer" onclick="verDetalleConsulta('${doc.id}')"><div class="flex justify-between items-start"><div class="flex-1"><div class="flex items-center gap-2 flex-wrap">${icono}<span class="font-mono text-xs font-bold bg-white px-2 py-0.5 rounded">${escapeHtml(doc.codigoRadicado)}</span><span class="font-medium text-sm">${escapeHtml(doc.titulo)}</span></div><div class="text-xs text-slate-500 mt-1 ml-6"><span>Dependencia: ${escapeHtml(doc.dependenciaNombre)}</span><span class="mx-2">•</span><span>Responsable: ${escapeHtml(doc.responsableActual || '-')}</span><span class="mx-2">•</span><span class="${isVencido ? 'text-red-600 font-semibold' : 'text-amber-600 font-semibold'}">${textoEstado}</span></div></div><button class="text-slate-400 hover:text-slate-600" onclick="event.stopPropagation(); verDetalleConsulta('${doc.id}')"><i class="fas fa-chevron-right"></i></button></div></div>`;
+                    }
+                    notificacionesContainer.innerHTML = notificacionesHtml;
+                }
+            }
+            const ctx = document.getElementById('timeChart')?.getContext('2d');
+            if(ctx && window.chartInstance) window.chartInstance.destroy();
+            if(ctx) { window.chartInstance = new Chart(ctx, { type: 'bar', data: { labels: ['Vencidos', 'Por vencer', 'Normal'], datasets: [{ label: 'Documentos', data: [vencidos, porVencer, normales], backgroundColor: ['#ef4444', '#f59e0b', '#10b981'], borderRadius: 8 }] }, options: { responsive: true, plugins: { legend: { position: 'top' } } } }); }
+        }
+
+        // ==================== MEJORAS EN CONSULTAS ====================
+        // Función mejorada para filtrar documentos con búsqueda por múltiples campos
+        function filtrarDocumentosConsulta() {
+            const textoBusqueda = document.getElementById('consultaBusqueda')?.value.toLowerCase() || '';
+            const estadoFlujo = document.getElementById('consultaEstadoFlujo')?.value || '';
+            const estadoTiempo = document.getElementById('consultaEstadoTiempo')?.value || '';
+            const tipoDoc = document.getElementById('consultaTipoDoc')?.value || '';
+            
+            let filtrados = [...documentos];
+            
+            // Búsqueda por múltiples campos (índices)
+            if (textoBusqueda) {
+                filtrados = filtrados.filter(d => 
+                    (d.codigoRadicado || '').toLowerCase().includes(textoBusqueda) ||
+                    (d.titulo || '').toLowerCase().includes(textoBusqueda) ||
+                    (d.tipo || '').toLowerCase().includes(textoBusqueda) ||
+                    (d.remitente || '').toLowerCase().includes(textoBusqueda) ||
+                    (d.destinatario || '').toLowerCase().includes(textoBusqueda) ||
+                    (d.dependenciaNombre || '').toLowerCase().includes(textoBusqueda) ||
+                    (d.workflowStatus || '').toLowerCase().includes(textoBusqueda) ||
+                    (d.referencia || '').toLowerCase().includes(textoBusqueda)
+                );
+            }
+            
+            // Filtrar por estado del flujo
+            if (estadoFlujo) {
+                filtrados = filtrados.filter(d => (d.workflowStatus || 'Pendiente') === estadoFlujo);
+            }
+            
+            // Filtrar por tipo de documento
+            if (tipoDoc) {
+                filtrados = filtrados.filter(d => d.tipo === tipoDoc);
+            }
+            
+            // Filtrar por estado de tiempo
+            if (estadoTiempo) {
+                filtrados = filtrados.filter(d => calcularEstadoTiempo(d.fechaVencimiento) === estadoTiempo);
+            }
+            
+            const tbody = document.getElementById('consultaTablaBody');
+            if (tbody) {
+                if (filtrados.length === 0) { 
+                    tbody.innerHTML = `<tr><td colspan="7" class="resultado-vacio"><i class="fas fa-search"></i><p>No se encontraron documentos con los filtros aplicados</p><p class="text-xs mt-2">Intente con otros criterios de búsqueda</p></div></td>`;
+                } else {
+                    let html = '';
+                    for (let d of filtrados) {
+                        const et = calcularEstadoTiempo(d.fechaVencimiento);
+                        const etTexto = et === 'vencido' ? 'VENCIDO' : (et === 'porVencer' ? 'Por vencer' : 'Normal');
+                        const etColor = et === 'vencido' ? 'status-rojo' : (et === 'porVencer' ? 'status-amarillo' : 'status-verde');
+                        const tiempoRestante = calcularTiempoRestanteTexto(d.fechaVencimiento);
+                        const tieneAdjunto = d.archivoPdf && d.archivoPdf.length > 100;
+                        html += `<tr onclick="verDetalleConsulta('${d.id}')" class="cursor-pointer hover:bg-slate-50">
+                            <td class="px-3 py-2"><div class="font-mono font-bold">${escapeHtml(d.codigoRadicado)}</div><div class="text-xs text-slate-400">${d.fecha || '-'}</div>${tieneAdjunto ? '<div class="text-xs text-green-500 mt-1"><i class="fas fa-paperclip"></i> anexo</div>' : ''}</div></td>
+                            <td class="px-3 py-2"><div class="font-semibold">${escapeHtml(d.titulo)}</div><div class="text-xs text-slate-400">${d.tipo || '-'}</div></div></td>
+                            <td class="px-3 py-2"><div class="remitente-linea"><i class="fas fa-paper-plane"></i><span>${escapeHtml(d.remitente || '-')}</span></div><div class="remitente-linea mt-1"><i class="fas fa-envelope"></i><span>${escapeHtml(d.destinatario || '-')}</span></div></div></td>
+                            <td class="px-3 py-2">${escapeHtml(d.dependenciaNombre)}</div></td>
+                            <td class="px-3 py-2"><span class="inline-block px-2 py-1 rounded-full text-xs font-medium ${d.workflowStatus === 'Aprobado' ? 'bg-emerald-100 text-emerald-700' : (d.workflowStatus === 'En revisión' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600')}">${d.workflowStatus || 'Pendiente'}</span></div></td>
+                            <td class="px-3 py-2"><span class="status-badge ${etColor}">${etTexto}</span><div class="text-xs text-slate-400">${tiempoRestante}</div></div></td>
+                            <td class="px-3 py-2">${d.fechaVencimiento || '-'}</div></td>
+                        </tr>`;
+                    }
+                    tbody.innerHTML = html;
+                }
+            }
+            document.getElementById('consultaTotalResultados') && (document.getElementById('consultaTotalResultados').innerHTML = `<i class="fas fa-file-alt mr-1"></i> ${filtrados.length} resultados`);
+            return filtrados;
+        }
+
+        window.verDetalleConsulta = function(id) { abrirModalEdicionDoc(id); };
+
+        // FUNCIÓN PARA GENERAR PDF - CON FORMATO MEJORADO
+        async function generarPDFConsulta(resultados, filtrosTexto) {
+            if (resultados.length === 0) { mostrarToast('No hay resultados para exportar', 'error'); return; }
+            mostrarToast('Generando PDF, por favor espere...', 'info');
+            
+            const fechaActual = new Date().toLocaleDateString('es-ES');
+            const horaActual = new Date().toLocaleTimeString();
+            const safe = (str) => str ? String(str).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])) : '';
+            
+            let tablaHtml = '';
+            for (let d of resultados) {
+                const et = calcularEstadoTiempo(d.fechaVencimiento);
+                const etTexto = et === 'vencido' ? 'VENCIDO' : (et === 'porVencer' ? 'Por vencer' : 'Normal');
+                const etColor = et === 'vencido' ? '#dc2626' : (et === 'porVencer' ? '#f59e0b' : '#10b981');
+                const tiempoRestante = calcularTiempoRestanteTexto(d.fechaVencimiento);
+                const statusBg = d.workflowStatus === 'Aprobado' ? '#10b98120' : (d.workflowStatus === 'En revisión' ? '#f59e0b20' : '#cbd5e120');
+                const tieneAdjunto = d.archivoPdf && d.archivoPdf.length > 100;
+                
+                tablaHtml += `<tr style="page-break-inside: avoid;">
+                    <td style="padding: 8px; border: 1px solid #cbd5e1;">
+                        <div style="font-family: monospace; font-weight: bold;">${safe(d.codigoRadicado)}</div>
+                        <div style="font-size: 8pt; color: #64748b;">${d.fecha || '-'}</div>
+                        ${tieneAdjunto ? '<div style="font-size: 7pt; color: #10b981; margin-top: 3px;"><i class="fas fa-paperclip"></i> anexo</div>' : ''}
+                    </div></td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1;">
+                        <div style="font-weight: 600;">${safe(d.titulo)}</div>
+                        <div style="font-size: 8pt; color: #64748b;">${d.tipo || '-'}</div>
+                    </div></td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1;">
+                        <div><strong>De:</strong> ${safe(d.remitente || '-')}</div>
+                        <div style="margin-top: 4px;"><strong>Para:</strong> ${safe(d.destinatario || '-')}</div>
+                    </div></td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1;">${safe(d.dependenciaNombre)}</div></td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">
+                        <span style="background: ${statusBg}; padding: 4px 8px; border-radius: 12px;">${d.workflowStatus || 'Pendiente'}</span>
+                    </div></td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">
+                        <span style="color: ${etColor}; font-weight: bold;">${etTexto}</span>
+                        <div style="font-size: 7pt; color: #64748b;">${tiempoRestante}</div>
+                    </div></td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">${d.fechaVencimiento || '-'}</div></td>
+                </tr>`;
+            }
+            
+            const htmlContent = `<!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Reporte Consulta GED</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: 'Segoe UI', Arial, sans-serif; background: white; padding: 20px; }
+                    .header { text-align: center; border: 2px solid #1e3a5f; padding: 15px; margin-bottom: 20px; background: #f0f4f8; border-radius: 8px; }
+                    .header h1 { font-size: 16pt; color: #1e3a5f; }
+                    .header h2 { font-size: 10pt; color: #4a5568; font-weight: normal; margin-top: 5px; }
+                    .titulo-reporte { text-align: center; background: #1e3a5f; color: white; padding: 10px; margin: 10px 0; border-radius: 6px; }
+                    .titulo-reporte h3 { font-size: 12pt; }
+                    .titulo-reporte p { font-size: 8pt; margin-top: 5px; opacity: 0.9; }
+                    .filtros { background: #f8fafc; padding: 10px 15px; margin: 10px 0; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 8pt; }
+                    .filtros strong { color: #1e3a5f; }
+                    .resumen { background: #e0f2fe; padding: 10px 15px; margin: 10px 0; font-weight: bold; font-size: 10pt; border-left: 4px solid #1e3a5f; border-radius: 4px; }
+                    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                    th { background: #1e3a5f; color: white; padding: 10px; border: 1px solid #2d4a7a; font-weight: 600; font-size: 9pt; text-align: center; }
+                    td { border: 1px solid #cbd5e1; vertical-align: top; }
+                    .footer { text-align: center; margin-top: 20px; padding: 15px; border-top: 2px solid #1e3a5f; background: #f8fafc; border-radius: 6px; }
+                    .footer p { margin: 5px 0; font-size: 8pt; }
+                    @media print { body { padding: 0; margin: 0; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>GOBIERNO MUNICIPAL</h1>
+                    <h2>Sistema de Gestión Documental GED</h2>
+                </div>
+                <div class="titulo-reporte">
+                    <h3>REPORTE DE CONSULTA DOCUMENTAL</h3>
+                    <p>Generado: ${fechaActual} - ${horaActual}</p>
+                </div>
+                <div class="filtros">
+                    <strong>📋 FILTROS APLICADOS:</strong><br>${filtrosTexto}
+                </div>
+                <div class="resumen">
+                    📄 TOTAL DE REGISTROS: ${resultados.length} documentos
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 13%;">RADICADO / FECHA</th>
+                            <th style="width: 18%;">TÍTULO / TIPO</th>
+                            <th style="width: 27%;">REMITENTE / DESTINATARIO</th>
+                            <th style="width: 12%;">DEPENDENCIA</th>
+                            <th style="width: 10%;">ESTADO FLUJO</th>
+                            <th style="width: 10%;">ESTADO TIEMPO</th>
+                            <th style="width: 10%;">VENCIMIENTO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tablaHtml}
+                    </tbody>
+                </table>
+                <div class="footer">
+                    <p><strong>Reporte generado por GED Workflow - Sistema de Gestión Documental</strong></p>
+                    <p>Desarrollado por Ing. Fabian Chacón</p>
+                    <p>Fecha de generación: ${fechaActual} - ${horaActual}</p>
+                </div>
+            </body>
+            </html>`;
+            
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'absolute';
+            iframe.style.left = '-9999px';
+            iframe.style.top = '-9999px';
+            iframe.style.width = '1100px';
+            iframe.style.height = '900px';
+            document.body.appendChild(iframe);
+            iframe.srcdoc = htmlContent;
+            
+            await new Promise(r => setTimeout(r, 1500));
+            
+            const opt = {
+                margin: [0.3, 0.3, 0.3, 0.3],
+                filename: `Reporte_Consulta_GED_${Date.now()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+            };
+            
+            await html2pdf().set(opt).from(iframe.contentDocument.body).save();
+            document.body.removeChild(iframe);
+            mostrarToast(`PDF generado correctamente con ${resultados.length} resultados`, 'success');
+        }
+
+        // Modales
+        function abrirModalNuevoDoc() { if (!tienePermiso('crear_documento')) { mostrarToast('Sin permiso', 'error'); return; } document.getElementById('documentForm').reset(); document.getElementById('docId').value = ''; document.getElementById('fecha').value = new Date().toISOString().slice(0,10); document.getElementById('fechaVencimiento').value = new Date(Date.now()+15*86400000).toISOString().slice(0,10); document.getElementById('codigoRadicado').value = 'Se generará al guardar'; document.getElementById('archivoPdf').value = ''; document.getElementById('pdfInfoContainer').classList.add('hidden'); cargarSelects(); document.getElementById('modalDocumento').classList.remove('invisible','opacity-0'); }
+        function abrirModalEdicionDoc(id) { if (!tienePermiso('editar_documento')) { mostrarToast('Sin permiso', 'error'); return; } const doc = documentos.find(d => d.id === id); if (!doc) return; document.getElementById('docId').value = doc.id; document.getElementById('codigoRadicado').value = doc.codigoRadicado; document.getElementById('titulo').value = doc.titulo; document.getElementById('tipo').value = doc.tipo; document.getElementById('fecha').value = doc.fecha || ''; document.getElementById('fechaVencimiento').value = doc.fechaVencimiento || ''; document.getElementById('remitente').value = doc.remitente || ''; document.getElementById('destinatario').value = doc.destinatario || ''; document.getElementById('direccion').value = doc.direccion || ''; document.getElementById('referencia').value = doc.referencia || ''; document.getElementById('descripcion').value = doc.descripcion || ''; cargarSelects(); document.getElementById('dependenciaDestino').value = doc.dependenciaId || ''; document.getElementById('flujoAsignado').value = doc.workflowId || ''; const pdfInfo = document.getElementById('pdfInfoContainer'); if(doc.archivoPdf && pdfInfo) { pdfInfo.innerHTML = '<i class="fas fa-check-circle text-green-600"></i> PDF adjunto'; pdfInfo.classList.remove('hidden'); } else if(pdfInfo) pdfInfo.classList.add('hidden'); document.getElementById('archivoPdf').value = ''; document.getElementById('modalDocumento').classList.remove('invisible','opacity-0'); }
+        function abrirModalAvance(docId) { if (!tienePermiso('avanzar_flujo')) { mostrarToast('Sin permiso', 'error'); return; } const doc = documentos.find(d => d.id === docId); if (!doc || !doc.workflowId) { mostrarToast('Sin flujo asignado', 'error'); return; } const wf = getWorkflowById(doc.workflowId); if (!wf) return; const stepActual = doc.workflowStep || 0; if (stepActual >= wf.pasos.length - 1) { mostrarToast('Flujo completado', 'info'); return; } currentAvanceDocId = docId; const siguientePaso = wf.pasos[stepActual+1]; const depNombre = dependencias.find(d => d.id === siguientePaso.dependenciaId)?.nombre || siguientePaso.dependenciaNombre; const tieneAdjunto = doc.archivoPdf && doc.archivoPdf.length > 100; const mensajeAnexo = tieneAdjunto ? '\n\n📎 El documento incluye un archivo PDF adjunto que se enviará automáticamente.' : ''; document.getElementById('avanceDocInfo').innerHTML = `<strong>${escapeHtml(doc.titulo)}</strong><br>Próximo paso: <span class="font-semibold text-indigo-600">${siguientePaso.nombre}</span><br>Responsable: ${siguientePaso.responsable}<br>Dependencia: ${depNombre}${mensajeAnexo}`; document.getElementById('modalAvanceFlujo').classList.remove('invisible','opacity-0'); }
+        async function confirmarAvance() { if (currentAvanceDocId) { const comentario = document.getElementById('comentarioAvance').value; await actualizarPasoDocumento(currentAvanceDocId, comentario); cerrarAvance(); } }
+        function cerrarAvance() { document.getElementById('modalAvanceFlujo').classList.add('invisible','opacity-0'); currentAvanceDocId = null; document.getElementById('comentarioAvance').value = ''; }
+        function cerrarModalDoc() { document.getElementById('modalDocumento').classList.add('invisible','opacity-0'); }
+        function abrirModalFlujo(flowId) { if (currentUser?.rol !== 'admin') { mostrarToast('Solo administradores', 'error'); return; } document.getElementById('flujoNombre').value = ''; document.getElementById('stepsContainer').innerHTML = ''; document.getElementById('flujoIdEdit').value = ''; if (flowId) { const flow = workflows.find(w => w.id === flowId); if (flow) { document.getElementById('flujoNombre').value = flow.nombre; document.getElementById('flujoIdEdit').value = flow.id; for (var p of flow.pasos) agregarPasoUI(p.nombre, p.dependenciaId, p.responsable); } } if (document.getElementById('stepsContainer').children.length === 0) agregarPasoUI('', dependencias[0]?.id || '', ''); document.getElementById('modalFlujo').classList.remove('invisible','opacity-0'); }
+        function agregarPasoUI(nombre = '', dependenciaId = '', responsable = '') { const container = document.getElementById('stepsContainer'); const div = document.createElement('div'); div.className = 'flex gap-2 items-center bg-white p-2 rounded-lg border mb-2'; div.innerHTML = `<input type="text" class="flex-1 border rounded-lg p-2 text-sm" placeholder="Nombre" value="${escapeHtml(nombre)}"><select class="step-dependencia-select border rounded-lg p-2 text-sm">${getDependenciaOptionsHtml(dependenciaId)}</select><input type="text" class="border rounded-lg p-2 text-sm w-36" placeholder="Responsable" value="${escapeHtml(responsable)}"><button type="button" class="text-red-500 p-1 remove-step"><i class="fas fa-times-circle"></i></button>`; container.appendChild(div); div.querySelector('.remove-step').addEventListener('click', function() { div.remove(); }); }
+        function cerrarModalFlujo() { document.getElementById('modalFlujo').classList.add('invisible','opacity-0'); }
+        function abrirModalUsuario(id) { if (currentUser?.rol !== 'admin') { mostrarToast('Solo administradores', 'error'); return; } if (id) { const user = users.find(u => u.id === id); if (user) { document.getElementById('modalUsuarioTitle').innerText = 'Editar Usuario'; document.getElementById('usuarioIdEdit').value = user.id; document.getElementById('usuarioNombre').value = user.nombre; document.getElementById('usuarioEmail').value = user.email; document.getElementById('usuarioPassword').value = ''; document.getElementById('usuarioRol').value = user.rol; } } else { document.getElementById('modalUsuarioTitle').innerText = 'Nuevo Usuario'; document.getElementById('usuarioForm').reset(); document.getElementById('usuarioIdEdit').value = ''; } document.getElementById('modalUsuario').classList.remove('invisible','opacity-0'); }
+        function cerrarModalUsuario() { document.getElementById('modalUsuario').classList.add('invisible','opacity-0'); }
+        function abrirModalDependencia(id) { if (currentUser?.rol !== 'admin') { mostrarToast('Solo administradores', 'error'); return; } if (id) { const dep = dependencias.find(d => d.id === id); if (dep) { document.getElementById('dependenciaIdEdit').value = dep.id; document.getElementById('dependenciaNombre').value = dep.nombre; document.getElementById('dependenciaDescripcion').value = dep.descripcion || ''; document.getElementById('dependenciaEmail').value = dep.email || ''; } } else { document.getElementById('dependenciaForm').reset(); document.getElementById('dependenciaIdEdit').value = ''; } document.getElementById('modalDependencia').classList.remove('invisible','opacity-0'); }
+        function cerrarModalDependencia() { document.getElementById('modalDependencia').classList.add('invisible','opacity-0'); }
+        function cargarSelects() { const selectDep = document.getElementById('dependenciaDestino'); if(selectDep) selectDep.innerHTML = dependencias.map(d => '<option value="' + d.id + '">🏢 ' + d.nombre + '</option>').join(''); const selectFlujo = document.getElementById('flujoAsignado'); if(selectFlujo) selectFlujo.innerHTML = '<option value="">-- Sin flujo --</option>' + workflows.map(w => '<option value="' + w.id + '">' + escapeHtml(w.nombre) + '</option>').join(''); const selectConsultaFlujo = document.getElementById('consultaEstadoFlujo'); if(selectConsultaFlujo) selectConsultaFlujo.innerHTML = '<option value="">Todos</option><option>Pendiente</option><option>En revisión</option><option>Aprobado</option>'; const selectTipoDoc = document.getElementById('consultaTipoDoc'); if(selectTipoDoc) selectTipoDoc.innerHTML = '<option value="">Todos</option><option>Oficio</option><option>Carta</option><option>Factura</option><option>Contrato</option><option>Acta</option><option>Memorando</option><option>Informe</option><option>Resolución</option>'; }
+        function abrirModalEnviarCorreo(docId) { if (!tienePermiso('enviar_correo')) { mostrarToast('Sin permiso para enviar correos', 'error'); return; } const doc = documentos.find(d => d.id === docId); if (!doc) { mostrarToast('Documento no encontrado', 'error'); return; } document.getElementById('correoDocId').value = docId; const tieneAdjunto = doc.archivoPdf && doc.archivoPdf.length > 100; document.getElementById('correoDocTitulo').innerHTML = `<i class="fas fa-file-alt text-indigo-500 mr-2"></i>${escapeHtml(doc.codigoRadicado)} - ${escapeHtml(doc.titulo)}${tieneAdjunto ? ' <span class="text-green-600"><i class="fas fa-paperclip"></i> con anexo</span>' : ''}`; const selectDep = document.getElementById('correoDependencia'); selectDep.innerHTML = '<option value="">Seleccione una dependencia...</option>'; dependencias.forEach(dep => { selectDep.innerHTML += `<option value="${dep.id}" data-email="${dep.email || ''}">🏢 ${dep.nombre}</option>`; }); document.getElementById('correoAsunto').value = `Notificación Documento: ${doc.codigoRadicado} - ${doc.titulo}`; let mensajeCorreo = `Cordial saludo,\n\nMediante el presente, me permito remitir el documento ${doc.codigoRadicado} - "${doc.titulo}" para su conocimiento y fines pertinentes.\n\nRadicado: ${doc.codigoRadicado}\nFecha: ${doc.fecha}\nTipo: ${doc.tipo}\nRemitente: ${doc.remitente}\nDestinatario: ${doc.destinatario}\n`; if (tieneAdjunto) { mensajeCorreo += `\n📎 El documento incluye un archivo PDF adjunto.\n`; } mensajeCorreo += `\nAtentamente,\n${currentUser.nombre}\n${currentUser.rol === 'admin' ? 'Administrador GED' : (currentUser.rol === 'gestor' ? 'Gestor Documental' : 'Consultor')}`; document.getElementById('correoMensaje').value = mensajeCorreo; selectDep.onchange = function() { const selectedOption = this.options[this.selectedIndex]; const email = selectedOption.getAttribute('data-email'); if (email) { document.getElementById('correoDestinatario').value = email; } else { document.getElementById('correoDestinatario').value = ''; } }; document.getElementById('modalEnviarCorreo').classList.remove('invisible','opacity-0'); }
+        function cerrarModalCorreo() { document.getElementById('modalEnviarCorreo').classList.add('invisible', 'opacity-0'); document.getElementById('enviarCorreoForm').reset(); document.getElementById('correoDocId').value = ''; }
+
+        function initApp(user) {
+            currentUser = user;
+            cargarDatosUsuario();
+            document.getElementById('documentosSection').innerHTML = `<div class="bg-white rounded-2xl shadow-lg border p-5 mb-6"><div class="flex flex-col lg:flex-row gap-4"><div class="flex-1 relative"><i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i><input type="text" id="searchInput" placeholder="Buscar..." class="w-full pl-10 pr-4 py-3 border-2 rounded-xl"></div><button id="btnResetFiltros" class="bg-slate-100 hover:bg-slate-200 px-5 rounded-xl">Limpiar</button></div></div><div class="flex justify-between items-center mb-4"><div class="bg-gradient-to-r from-[#1e3a5f] to-[#2d4a7a] text-white px-4 py-2 rounded-full text-sm"><span id="resultCount">0</span> documentos</div>${tienePermiso('crear_documento') ? '<button id="btnNuevoDocumento" class="btn-primary text-white px-6 py-2 rounded-xl"><i class="fas fa-plus-circle"></i> Nuevo Documento</button>' : ''}</div><div id="documentosContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>`;
+            document.getElementById('flujosSection').innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold">Flujos</h2>${currentUser?.rol === 'admin' ? '<button id="crearFlujoBtn" class="bg-emerald-500 text-white px-5 py-2 rounded-xl"><i class="fas fa-plus"></i> Nuevo</button>' : ''}</div><div id="flujosContainer"></div>`;
+            document.getElementById('dependenciasSection').innerHTML = '<div id="dependenciasContainer"></div>';
+            document.getElementById('dashboardSection').innerHTML = `<h2 class="text-2xl font-bold mb-4">Dashboard</h2><div class="bg-white rounded-2xl shadow-lg border p-6 mb-6"><h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><i class="fas fa-traffic-light text-indigo-500"></i> Semáforo de Estado</h3><div class="semaforo"><div class="semaforo-item semaforo-verde flex-1"><div class="luz-semaforo luz-verde"></div><div class="font-bold text-green-600 text-xl" id="normalesCount">0</div><div class="text-sm text-slate-600">Normal</div></div><div class="semaforo-item semaforo-amarillo flex-1"><div class="luz-semaforo luz-amarilla"></div><div class="font-bold text-amber-600 text-xl" id="porVencerCount">0</div><div class="text-sm text-slate-600">Por Vencer</div></div><div class="semaforo-item semaforo-rojo flex-1"><div class="luz-semaforo luz-roja"></div><div class="font-bold text-red-600 text-xl" id="vencidosCount">0</div><div class="text-sm text-slate-600">Vencidos</div></div></div><div id="semaforoInfo" class="text-center mt-4 p-3 rounded-lg bg-slate-50"></div></div><div class="bg-white rounded-2xl shadow-lg border p-6 mb-6"><h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><i class="fas fa-bell text-amber-500"></i> Notificaciones</h3><div id="notificacionesContainer" class="max-h-80 overflow-y-auto space-y-2"><div class="text-center py-4 text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando...</div></div></div><div class="bg-white rounded-2xl shadow-lg border p-6"><h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><i class="fas fa-chart-bar text-indigo-500"></i> Estadísticas</h3><canvas id="timeChart" height="200"></canvas></div>`;
+            document.getElementById('consultasSection').innerHTML = `<div class="bg-white rounded-2xl shadow-lg border p-6"><h2 class="text-2xl font-bold mb-4">Consultas Avanzadas</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"><div class="search-field-icon"><i class="fas fa-search"></i><input type="text" id="consultaBusqueda" placeholder="Buscar en todos los campos..." class="w-full border-2 rounded-xl p-2.5 pl-9"></div><select id="consultaEstadoFlujo" class="border-2 rounded-xl p-2.5"><option value="">Todos los estados</option><option>Pendiente</option><option>En revisión</option><option>Aprobado</option></select><select id="consultaEstadoTiempo" class="border-2 rounded-xl p-2.5"><option value="">Estado tiempo</option><option value="vencido">Vencidos</option><option value="porVencer">Por vencer</option><option value="normal">Normal</option></select><select id="consultaTipoDoc" class="border-2 rounded-xl p-2.5"></select><div class="flex gap-2"><button id="btnAplicarFiltros" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition"><i class="fas fa-search mr-2"></i>Buscar</button><button id="btnLimpiarFiltros" class="bg-slate-200 hover:bg-slate-300 px-5 py-2.5 rounded-xl transition"><i class="fas fa-eraser mr-2"></i>Limpiar</button></div></div><div class="flex justify-between items-center mb-4"><div id="consultaTotalResultados" class="bg-slate-100 px-4 py-2 rounded-full text-sm font-medium"><i class="fas fa-file-alt mr-1"></i> 0 resultados</div><button id="btnExportarConsultaPDF" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl transition"><i class="fas fa-file-pdf"></i> Exportar PDF</button></div><div class="consulta-container"><table class="consulta-tabla"><thead><tr><th>Radicado / Fecha</th><th>Título / Tipo</th><th>Remitente / Destinatario</th><th>Dependencia</th><th>Estado Flujo</th><th>Estado Tiempo</th><th>Vencimiento</th></tr></thead><tbody id="consultaTablaBody"><tr><td colspan="7" class="resultado-vacio"><i class="fas fa-info-circle"></i><p>Aplique filtros y presione "Buscar" para ver resultados</p><p class="text-xs mt-2">Puede buscar por radicado, título, tipo, remitente, destinatario, dependencia o estado</p></td></tr></tbody></table></div></div>`;
+            document.getElementById('usuariosSection').innerHTML = '<div id="usuariosContainer"></div>';
+            document.getElementById('userNameDisplay').innerText = user.nombre;
+            document.getElementById('userEmailDisplay').innerText = user.email;
+            const rolDisplay = document.getElementById('userRolDisplay'); if(rolDisplay) rolDisplay.innerHTML = user.rol === 'admin' ? '<span class="role-badge-admin">Administrador</span>' : (user.rol === 'gestor' ? '<span class="role-badge-gestor">Gestor</span>' : '<span class="role-badge-consultor">Consultor</span>');
+            const avatar = document.getElementById('userAvatar'); if(avatar) { avatar.innerText = user.nombre.charAt(0); avatar.className = 'user-avatar ' + (user.rol === 'admin' ? 'avatar-admin' : (user.rol === 'gestor' ? 'avatar-gestor' : 'avatar-consultor')); }
+            document.getElementById('btnNuevoDocumento')?.addEventListener('click', abrirModalNuevoDoc);
+            document.getElementById('btnResetFiltros')?.addEventListener('click', () => { document.getElementById('searchInput').value = ''; renderizarDocumentos(); });
+            document.getElementById('searchInput')?.addEventListener('input', () => renderizarDocumentos());
+            document.getElementById('crearFlujoBtn')?.addEventListener('click', () => abrirModalFlujo(null));
+            document.getElementById('btnAplicarFiltros')?.addEventListener('click', () => filtrarDocumentosConsulta());
+            document.getElementById('btnLimpiarFiltros')?.addEventListener('click', () => { 
+                document.getElementById('consultaBusqueda').value = ''; 
+                document.getElementById('consultaEstadoFlujo').value = ''; 
+                document.getElementById('consultaEstadoTiempo').value = ''; 
+                document.getElementById('consultaTipoDoc').value = ''; 
+                const tbody = document.getElementById('consultaTablaBody');
+                if(tbody) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="resultado-vacio"><i class="fas fa-info-circle"></i><p>Aplique filtros y presione "Buscar" para ver resultados</p><p class="text-xs mt-2">Puede buscar por radicado, título, tipo, remitente, destinatario, dependencia o estado</p></td></tr>';
+                }
+                document.getElementById('consultaTotalResultados') && (document.getElementById('consultaTotalResultados').innerHTML = '<i class="fas fa-file-alt mr-1"></i> 0 resultados');
+            });
+            document.getElementById('btnExportarConsultaPDF')?.addEventListener('click', async () => { const resultados = filtrarDocumentosConsulta(); let filtrosTexto = ''; const busqueda = document.getElementById('consultaBusqueda')?.value; if(busqueda) filtrosTexto += `• Búsqueda general: "${busqueda}"<br>`; const estadoFlujo = document.getElementById('consultaEstadoFlujo')?.value; if(estadoFlujo) filtrosTexto += `• Estado flujo: ${estadoFlujo}<br>`; const estadoTiempo = document.getElementById('consultaEstadoTiempo')?.value; if(estadoTiempo) filtrosTexto += `• Estado tiempo: ${estadoTiempo}<br>`; const tipoDoc = document.getElementById('consultaTipoDoc')?.value; if(tipoDoc) filtrosTexto += `• Tipo: ${tipoDoc}<br>`; if(!filtrosTexto) filtrosTexto = 'Ningún filtro aplicado'; await generarPDFConsulta(resultados, filtrosTexto); });
+            document.getElementById('copyRadicadoBtn')?.addEventListener('click', () => { const rad = document.getElementById('codigoRadicado').value; if(rad && !rad.includes('Se generará')) { navigator.clipboard.writeText(rad); mostrarToast('Código copiado', 'success'); } });
+            const tabs = ['Documentos', 'Flujos', 'Dependencias', 'Dashboard', 'Consultas', 'Usuarios'];
+            tabs.forEach(tab => { document.getElementById(`tab${tab}`)?.addEventListener('click', () => { document.querySelectorAll('[id$="Section"]').forEach(s => s.classList.add('hidden')); document.getElementById(`${tab.toLowerCase()}Section`).classList.remove('hidden'); if(tab === 'Documentos') renderizarDocumentos(); if(tab === 'Flujos') renderizarFlujos(); if(tab === 'Dependencias') renderizarDependencias(); if(tab === 'Dashboard') actualizarDashboard(); if(tab === 'Consultas') filtrarDocumentosConsulta(); if(tab === 'Usuarios' && currentUser?.rol === 'admin') renderizarUsuarios(); }); });
+            cargarSelects();
+            renderizarDocumentos(); renderizarFlujos(); renderizarDependencias(); actualizarDashboard(); renderizarUsuarios();
+            // NO se ejecuta filtrarDocumentosConsulta() automáticamente - la tabla comienza vacía
+            if (notificacionesTimeout) clearInterval(notificacionesTimeout);
+            notificacionesTimeout = setInterval(() => actualizarDashboard(), 30000);
+        }
+
+        // Eventos
+        document.getElementById('enviarCorreoForm')?.addEventListener('submit', async (e) => { e.preventDefault(); const docId = document.getElementById('correoDocId').value; const doc = documentos.find(d => d.id === docId); if (!doc) { mostrarToast('Documento no encontrado', 'error'); return; } const dependenciaId = document.getElementById('correoDependencia').value; const destinatario = document.getElementById('correoDestinatario').value; const asunto = document.getElementById('correoAsunto').value; const mensaje = document.getElementById('correoMensaje').value; if (!dependenciaId) { mostrarToast('Seleccione una dependencia', 'error'); return; } if (!destinatario) { mostrarToast('Ingrese el correo del destinatario', 'error'); return; } const dependencia = dependencias.find(d => d.id === dependenciaId); const submitBtn = e.target.querySelector('button[type="submit"]'); const originalHtml = submitBtn.innerHTML; submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...'; submitBtn.disabled = true; const documentoInfo = { codigo: doc.codigoRadicado, titulo: doc.titulo }; const tieneAnexo = doc.archivoPdf && doc.archivoPdf.length > 100; let resultado; if (tieneAnexo) { resultado = await enviarCorreoConAnexo(destinatario, asunto, mensaje, documentoInfo, doc.archivoPdf); } else { resultado = await enviarCorreo(destinatario, asunto, mensaje, documentoInfo); } if (resultado) { mostrarToast(`Correo ${tieneAnexo ? 'con anexo ' : ''}enviado a ${dependencia?.nombre || 'Dependencia'} (${destinatario})`, 'success'); cerrarModalCorreo(); } else { mostrarToast('Error al enviar el correo', 'error'); } submitBtn.innerHTML = originalHtml; submitBtn.disabled = false; });
+        document.getElementById('closeCorreoModal')?.addEventListener('click', cerrarModalCorreo);
+        document.getElementById('cancelCorreoBtn')?.addEventListener('click', cerrarModalCorreo);
+        document.getElementById('documentForm')?.addEventListener('submit', async (e) => { e.preventDefault(); let archivoBase64 = null; const fileInput = document.getElementById('archivoPdf'); if (fileInput.files.length > 0) { const file = fileInput.files[0]; if (file.type === 'application/pdf') { archivoBase64 = await convertirArchivoABase64(file); } else { mostrarToast('Solo PDF', 'error'); return; } } const data = { titulo: document.getElementById('titulo').value, tipo: document.getElementById('tipo').value, fecha: document.getElementById('fecha').value, fechaVencimiento: document.getElementById('fechaVencimiento').value, dependenciaId: document.getElementById('dependenciaDestino').value, remitente: document.getElementById('remitente').value, destinatario: document.getElementById('destinatario').value, direccion: document.getElementById('direccion').value, referencia: document.getElementById('referencia').value, descripcion: document.getElementById('descripcion').value, workflowId: document.getElementById('flujoAsignado').value || '' }; const id = document.getElementById('docId').value; guardarDocumento(data, id, archivoBase64); });
+        document.getElementById('flujoForm')?.addEventListener('submit', (e) => { e.preventDefault(); const nombre = document.getElementById('flujoNombre').value.trim(); if(!nombre) return; const pasos = []; const stepDivs = document.querySelectorAll('#stepsContainer .flex.gap-2.items-center'); stepDivs.forEach((div, idx) => { const nombreInput = div.querySelector('input[type="text"]:first-child'); const dependenciaSelect = div.querySelector('.step-dependencia-select'); const responsableInput = div.querySelector('input[type="text"]:last-child'); if (nombreInput && nombreInput.value.trim()) { const depId = dependenciaSelect ? dependenciaSelect.value : (dependencias[0]?.id || 'dep1'); const dep = dependencias.find(d => d.id === depId); pasos.push({ nombre: nombreInput.value.trim(), orden: idx, dependenciaId: depId, dependenciaNombre: dep ? dep.nombre : 'Secretaría General', responsable: responsableInput ? responsableInput.value.trim() : (dep ? dep.nombre : 'Secretaría General') }); } }); if(pasos.length === 0) return; const editId = document.getElementById('flujoIdEdit').value; if(editId) { const idx = workflows.findIndex(w => w.id === editId); if(idx !== -1) workflows[idx] = { ...workflows[idx], nombre, pasos }; } else { workflows.push({ id: 'wf' + Date.now(), nombre, pasos }); } guardarWorkflows(); renderizarFlujos(); cerrarModalFlujo(); mostrarToast('Flujo guardado', 'success'); });
+        document.getElementById('usuarioForm')?.addEventListener('submit', (e) => { e.preventDefault(); const id = document.getElementById('usuarioIdEdit').value; const nombre = document.getElementById('usuarioNombre').value; const email = document.getElementById('usuarioEmail').value; const password = document.getElementById('usuarioPassword').value; const rol = document.getElementById('usuarioRol').value; if(id) { actualizarUsuario(id, { nombre, email, rol, password: password || undefined }); } else { if(!password) { mostrarToast('Contraseña requerida', 'error'); return; } agregarUsuario(nombre, email, password, rol); } cerrarModalUsuario(); });
+        document.getElementById('dependenciaForm')?.addEventListener('submit', (e) => { e.preventDefault(); const id = document.getElementById('dependenciaIdEdit').value; const nombre = document.getElementById('dependenciaNombre').value; const descripcion = document.getElementById('dependenciaDescripcion').value; const email = document.getElementById('dependenciaEmail').value || ''; if (nombre.trim() === '') { mostrarToast('El nombre de la dependencia es requerido', 'error'); return; } if(id) { actualizarDependencia(id, { nombre, descripcion, email }); } else { agregarDependencia(nombre, descripcion, email); } cerrarModalDependencia(); });
+        document.getElementById('closeDocModal')?.addEventListener('click', cerrarModalDoc); document.getElementById('cancelDocModal')?.addEventListener('click', cerrarModalDoc);
+        document.getElementById('closeFlujoModal')?.addEventListener('click', cerrarModalFlujo); document.getElementById('cancelFlujoModal')?.addEventListener('click', cerrarModalFlujo);
+        document.getElementById('confirmAvanceBtn')?.addEventListener('click', confirmarAvance); document.getElementById('cancelAvanceBtn')?.addEventListener('click', cerrarAvance);
+        document.getElementById('closeUsuarioModal')?.addEventListener('click', cerrarModalUsuario); document.getElementById('cancelUsuarioModal')?.addEventListener('click', cerrarModalUsuario);
+        document.getElementById('closeDependenciaModal')?.addEventListener('click', cerrarModalDependencia); document.getElementById('cancelDependenciaModal')?.addEventListener('click', cerrarModalDependencia);
+        document.getElementById('closePdfModal')?.addEventListener('click', () => { document.getElementById('modalVerPdf').classList.add('invisible','opacity-0'); document.getElementById('pdfViewer').src = ''; });
+        document.getElementById('addStepBtn')?.addEventListener('click', () => agregarPasoUI('', dependencias[0]?.id || '', ''));
+        window.addEventListener('click', (e) => { if(e.target === document.getElementById('modalDocumento')) cerrarModalDoc(); if(e.target === document.getElementById('modalFlujo')) cerrarModalFlujo(); if(e.target === document.getElementById('modalAvanceFlujo')) cerrarAvance(); if(e.target === document.getElementById('modalUsuario')) cerrarModalUsuario(); if(e.target === document.getElementById('modalDependencia')) cerrarModalDependencia(); if(e.target === document.getElementById('modalVerPdf')) { document.getElementById('modalVerPdf').classList.add('invisible','opacity-0'); document.getElementById('pdfViewer').src = ''; } });
+
+        inicializarDatos();
+        document.getElementById('loginForm')?.addEventListener('submit', function(e) { e.preventDefault(); const email = document.getElementById('loginUsuario').value.trim(); const password = document.getElementById('loginPassword').value; const user = users.find(u => u.email === email && u.password === password); if(user) { const userData = { email: user.email, nombre: user.nombre, rol: user.rol }; initApp(userData); document.getElementById('loginContainer').classList.add('hidden'); document.getElementById('appContainer').classList.remove('hidden'); mostrarToast('Bienvenido ' + user.nombre, 'success'); } else { mostrarToast('Credenciales incorrectas', 'error'); } });
+        document.getElementById('logoutBtn')?.addEventListener('click', () => { location.reload(); });
+    </script>
+</body>
+</html>
